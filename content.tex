@@ -1,0 +1,193 @@
+\newpage
+\section{Introduction}
+
+
+\newpage
+\section{Analysis}
+
+This project is about optimizing the Miura's pipepline~\cite{MiuraLineTracking2004} with a \acrshort{gpu}.
+
+\subsection{The Miura's Pipeline}
+The Miura's pipeline from the publication\cite{MiuraLineTracking2004} is a method that takes as input a single image of a finger, extracts the veins and then computes the distance between the extracted veins and a reference vein pattern.
+It shows good performance and accuracy and show a possibility of using this biometric attribute for authentication purposes.
+
+\subsubsection{Previous Work}
+\label{subsubsec:previous-work}
+The Miura's pipeline is a method that was proposed in 2004 and since then, several works have been done inside the EPFL lab's Lasec to use it as auhtentication for patient identification in hospitals.
+
+\paragraph*{Optimized Pipeline}
+In 2024, Lara Sofie Lenz, created an optimized implementation of Miura's pipeline~\cite{OptimizedPipelineLaraSofieLenz24}.
+This C++ optimized implementation runs arround 10 times faster than the original implementation in Python for a \textbf{1 to 1} matching.
+The figure~\ref{fig:optimized-pipeline} shows the flow of the optimized pipeline.
+\begin{figure}[ht]
+    \mypar
+    \centering
+    \includegraphics[width=\textwidth]{figures/pipeline/third-pipeline.pdf}
+    \caption{The flow of the optimized pipeline from Lara Sofie Lenz' report~\cite{OptimizedPipelineLaraSofieLenz24}}
+    \label{fig:optimized-pipeline}
+\end{figure}
+
+\paragraph*{Mathematical Background}
+We see that the Ooptimized pipeline (figure~\ref{fig:optimized-pipeline}) uses a \acrfull{fft} to compute the cross-correlation between the extracted veins and the reference vein pattern.
+The mathematical explanation of using a \acrshort{fft} to compute the cross-correlation between two signals is explained in detail in the semester project of Vincent Luke Ventura about Biometric Homomorphic Matching~\cite{VincentLukeVentura26}.
+
+\subsubsection{1 to N Matching}
+All the previous works in the Lasec lab about Biometric identification explained in the previous section~\ref{subsubsec:previous-work} show good performance (less than 1 second) for a \textbf{1 to 1} matching.
+The 1:1 is obviously quicker than a 1:N matching, but it requires the user to select his id before the authentication.
+The 1:N matching will be used at sign up phase, to ensure that the user is not already in the database.
+\mypar
+The idea is to compute the cross-correlation between the extracted veins and all the reference vein patterns in the database at the same time.
+The strategy is a shifting of architectural design from a \acrshort{cpu} which is the classical processor unit to a \acrshort{gpu} which is a specialized hardware that is designed to perform parallel computations efficiently.
+\mypar
+The scope of this project is to uses the optimized pipeline from Lara Sofie Lenz~\cite{OptimizedPipelineLaraSofieLenz24} and don't change the part of the pipeline related to the veins extraction.
+The matching part of the pipeline is modified to compute the cross-correlation between the extracted veins and all the reference vein patterns in the database at the same time using a \acrshort{gpu}.
+
+\subsection{Graphics Processing Units}
+\acrfull{gpu} are specialized hardware that are designed to perform parallel computations efficiently.
+Most of the time, they are used as a co-processor to a \acrshort{cpu} to accelerate the performance of certain applications.
+
+\subsubsection{GPU Architecture}
+The classical architecture and the one of the main processor in a computer is the \acrfull{cpu}.
+This processor is designed to perform a wide range of tasks and is optimized for single-threaded performance.
+We generally says that it is a \acrfull{sisd} even if now  some \acrshort{cpu} have multiple cores and can perform some parallel computations.
+\mypar
+The \acrshort{gpu} is a specialized hardware that is designed to perform parallel computations efficiently.
+We generally says that it is a \acrfull{simd} because it can perform, physically, the same instruction on multiple data at the same time.
+\mypar
+In general, a \acrshort{gpu} is composed of several streaming multiprocessors (SM) that are composed of several cores. Each core can execute a thread and the threads are grouped in blocks that are executed on the SMs.
+The particularity between the core of a \acrshort{cpu} and the core of a \acrshort{gpu} (SM) is that all the threads of a block execute \textbf{the same instruction} at the same time.
+Multiple SMs together form a Graphics Processor Cluster (GPC) and multiple GPCs together form a \acrshort{gpu}.
+As shown in the figure~\ref{fig:gpu-architecture}, the \acrshort{gpu} has a different memory hierarchy than the \acrshort{cpu} and it is optimized for high throughput rather than low latency.
+The L2 cache is shared between all the SMs and the global memory is accessible by all the threads but has a high latency compared to the shared memory that is only accessible by the threads of a block and has a low latency.
+\begin{figure}[ht]
+    \mypar
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/gpu/GPU-architecture.png}
+    \caption{A GPU architecture schema from the PDF document~\cite{vmwareGpuArch}}
+    \label{fig:gpu-architecture}
+\end{figure}
+
+Every constructors of \acrshort{gpu} have their own architecture and their own way to organize the threads and the memory hierarchy but the general idea is the same and the main difference is the number of cores and the memory bandwidth.
+Other architecture, like Apple Silicon
+
+\subsubsection{GPU Constructors And Programming Models}
+In 2026, the two main architectures designers of \acrshort{gpu} are Nvidia and AMD.
+There are also emerging architectures like Intel with their Intel Arc series and Apple which include a \acrshort{gpu} in their Apple Silicon chips.
+\mypar
+To use a device like this, we need to use a programming model that allows us to offload the computations and the data.
+There is \acrshort{cuda} which is a proprietary programming model developed by Nvidia and that only works on Nvidia \acrshort{gpu}.
+AMD has developed \acrshort{hip} which is a programming model that allows to write code that can be executed on both Nvidia and AMD.
+There is also \acrshort{opencl} which is an open standard that allows to write code that can be executed on a wide range of devices, including \acrshort{gpu} from different manufacturers.
+\mypar
+The choice of the programming model is important because it will determine the performance and the portability of the code.
+\acrshort{sycl}~\cite{sycl2020} is an abastraction layer that allows to write code that can be executed with different \acrshort{gpu} constructors.
+This is very useful because it allows to write code that isn't tied to a specific architecture and that can be executed on a wide range of devices.
+Which is great as the architecture of the end device is not know yet and it facilitates the development phases for computer wihtout a specific \acrshort{gpu} constructor.
+Also, the portability of the code don't affect the performance according to the study "Comparing Performance and Portability Between CUDA and SYCL for Protein Database Search on NVIDIA, AMD, and Intel GPUs" (reference~\cite{syclVsCuda2023}).
+
+\subsubsection{GPU Programmation}
+Now, as the \acrshort{gpu} is a co-processor, it is used to accelerate the performance of certain tasks.
+The code executed on a computer is by default executed on the \acrshort{cpu} and when we want to use the \acrshort{gpu}, we need to explicitly offload the computations and the data to the \acrshort{gpu} using a programming model.
+The figure~\ref{fig:gpu-memory} shows the memory organization of a \acrshort{gpu}.
+\begin{figure}[ht]
+    \mypar
+    \centering
+    \includegraphics[width=\textwidth]{figures/gpu/gpu-memory.png}
+    \caption{Memory hierarchy in a PC with a GPU}
+    \label{fig:gpu-memory}
+\end{figure}
+\mypar
+The general steps to use a \acrshort{gpu}, regardless of the programming model, are the following:
+\begin{steps}
+    \item Allocate the parameters and the return values on the host memory.
+    \item Allocate the parameters and the return values on the device memory.
+    \item Copy the parameters from the host memory to the device memory.
+    \item Launch the kernel on the device.
+    \item Copy the return values from the device memory to the host memory.
+    \item Free the device memory.
+\end{steps}
+
+\newpage
+\section{Conception}
+
+\newpage
+\section{Realisation}
+
+\newpage
+\section{Evaluation}
+
+\newpage
+\section{Discussion \& Future Work}
+
+\newpage
+\section{Conclusion}
+
+\newpage
+\section{Example:}
+Example of latex section
+
+\paragraph*{Previous Work}
+
+...
+
+\begin{minipage}{0.4\textwidth}
+    \vspace{1.5em}
+
+    \centering
+    \includegraphics[width=\textwidth]{figures/memory_alignment/matrix-alignment-2.pdf}
+    \captionof{figure}{A visualization of how the four $240\times376$ matrices are aligned in the optimized implementation. The gray area denotes the values that we intend to access.}
+    \label{matal2}
+    
+    \vspace{1.5em}
+\end{minipage}
+\hfill
+\begin{minipage}{0.4\textwidth}
+    \vspace{1.5em}
+
+    \centering
+    \includegraphics[width=\textwidth]{figures/memory_alignment/memory-access-2.pdf}
+    \captionof{figure}{A visualization of the memory access pattern produced by Fig. \ref{matal2}. The gray boxes indicate the memory regions that need to be accessed when wanting to read the first row of the first matrix.}
+    \label{memacc2}
+    \vspace{1.5em}
+\end{minipage}
+
+
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|l|l|l|}
+        \hline
+        \multicolumn{2}{|c|}{} & \textit{V1} (in s) & \textit{V2} (in s) & \textit{V3} (in s) \\
+        \hline
+        \multirow{2}{*}{Complete Pipeline} & $\mu$ & 1.969198 & 0.387614 & 0.170519 \\ 
+        \cline{2-5}
+        & $\sigma$ & 0.424002 & 0.017806 & 0.009598 \\
+        \hline
+        \multirow{2}{*}{Edge Mask} & $\mu$ & 0.072014 & 0.017158 & 0.003849 \\ 
+        \cline{2-5}
+        & $\sigma$ & 0.019911 & 0.002081 & 0.000473 \\
+        \hline
+        \multirow{2}{*}{Prealignment} & $\mu$ & 0.006043 & 0.004284 & 0.004659 \\ 
+        \cline{2-5}
+        & $\sigma$ & 0.002194 & 0.001518 & 0.00058 \\
+        \hline
+         \multirow{2}{*}{Maximum Curvature} & $\mu$ & 1.715232 & 0.363249 & 0.153078 \\ 
+        \cline{2-5}
+        & $\sigma$ & 0.384366 & 0.015857 & 0.006914 \\
+        \hline
+         \multirow{2}{*}{Postalignment} & $\mu$ & 0.022223 & 0.007586 & \\ 
+        \cline{2-5}
+        & $\sigma$ & 0.003242 & 0.000427 & \\
+        \hline
+         \multirow{2}{*}{Plain Distance} & $\mu$ & 0.001574 & 0.000298 & \\ 
+        \cline{2-5}
+        & $\sigma$ & 0.000329 & $6.0327\cdot10^{-5}$ & \\
+        \hline
+         \multirow{2}{*}{Corrected Distance} & $\mu$ & 0.023797 & 0.007884 & 0.001254 \\ 
+        \cline{2-5}
+        & $\sigma$ & 0.003467 & 0.000433 & 0.000103 \\
+        \hline
+    \end{tabular}
+    \caption{Time measurement results (measured in seconds) for the entire pipeline and each pipeline step while Turbo Boost was enabled.}
+    \label{timingWTb}
+\end{table}

@@ -1,0 +1,51 @@
+% \documentclass[11pt, a4paper, twoside, openright]{book} %draft
+\documentclass[11pt, fleqn, english, a4paper]{article}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx,xcolor}
+\usepackage{amssymb, amsmath, array}
+\usepackage{enumitem}
+\usepackage{adjustbox}
+\usepackage{float}
+\usepackage{lscape}
+\usepackage{multirow}
+\usepackage{caption}
+\newlist{steps}{enumerate}{1}
+\setlist[steps, 1]{label = Step \arabic*:}
+\newlist{substeps}{enumerate}{1}
+\setlist[substeps, 1]{label = Step 1-\arabic*:}
+\usepackage{titlesec}
+\setcounter{secnumdepth}{4}
+
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
+\newcommand{\mypar}{\par\vspace{1em}}
+
+\usepackage[acronym]{glossaries}
+\makeglossaries
+\input{glossary}
+
+\begin{document}
+
+\input{cover}
+
+\input{abstract}
+
+\newpage
+\tableofcontents
+
+\input{content}
+
+% References
+\newpage
+\bibliographystyle{plainurl}
+\bibliography{ref}
+
+% Glossary / Acronyms
+\newpage
+\glsaddall
+\printglossary[type=\acronymtype, title={Acronyms}, nonumberlist]
+
+\input{appendix}
