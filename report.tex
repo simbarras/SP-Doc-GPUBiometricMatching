@@ -13,9 +13,17 @@
 \setlist[steps, 1]{label = Step \arabic*:}
 \newlist{substeps}{enumerate}{1}
 \setlist[substeps, 1]{label = Step 1-\arabic*:}
+\usepackage{minted}
+\setminted[cpp]{
+    frame=lines,
+    framesep=2mm,
+    baselinestretch=1.2,
+    bgcolor=lightgray!10,
+    fontsize=\footnotesize,
+    linenos
+}
 \usepackage{titlesec}
 \setcounter{secnumdepth}{4}
-
 \titleformat{\paragraph}
 {\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
 \titlespacing*{\paragraph}
@@ -49,3 +57,5 @@
 \printglossary[type=\acronymtype, title={Acronyms}, nonumberlist]
 
 \input{appendix}
+
+\end{document}

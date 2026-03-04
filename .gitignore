@@ -15,5 +15,7 @@
 **.out
 **.synctex.gz
 **.toc
+_minted/
 
 .DS_Store
+

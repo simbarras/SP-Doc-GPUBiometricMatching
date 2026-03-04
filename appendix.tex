@@ -1,22 +1,128 @@
 \newpage
 \appendix
-\section{The Maximum Curvature Algorithm}
-\label{appA}
+\section{SYCL Matrix Multiplication Example}
+\label{appendix:sycl-matmul}
+ 
+This section contains the \acrshort{sycl} code for the matrix multiplication example to illustrate the procedure explained in section~\ref{subsubsec:gpu-programmation}. The code is structured to demonstrate the use of \acrshort{sycl} for parallel computation on a GPU, and includes comments to explain each step of the process.
 
-...
 
-\begin{steps}
-    \item ...
+\begin{enumerate}
+    \item Initializing the size of the matrices
+\begin{minted}{cpp}
+int M = 512, K = 512, N = 512;
+size_t sizeA = M * K * sizeof(float);
+size_t sizeB = K * N * sizeof(float);
+size_t sizeC = M * N * sizeof(float);
+\end{minted}
+
+    \item Allocating memory and initializing the matrices on the host
+\begin{minted}{cpp}
+// Allocate host memory
+float* h_A = static_cast<float*>(malloc(sizeA));
+float* h_B = static_cast<float*>(malloc(sizeB));
+float* h_C = static_cast<float*>(malloc(sizeC));
+// Initialize matrices with dummy data
+for (int i = 0; i < M * K; i++) h_A[i] = 1.0f;
+for (int i = 0; i < K * N; i++) h_B[i] = 2.0f;
+\end{minted}
+
+    \item Creating a \acrshort{sycl} queue, the queue is used to submit work to the device.
+\begin{minted}{cpp}
+sycl::queue q;
+// Optional - Print the device name
+std::cout << "Running on: " 
+            << q.get_device().get_info<sycl::info::device::name>() 
+            << std::endl;
+\end{minted}
+
+    \item Allocating memory on the device and copying data from the host to the device
+\begin{minted}{cpp}
+// Allocate device memory
+float* d_A = sycl::malloc_device<float>(M * K, q);
+float* d_B = sycl::malloc_device<float>(K * N, q);
+float* d_C = sycl::malloc_device<float>(M * N, q);
+// Copying to device memory
+q.memcpy(d_A, h_A, sizeA);
+q.memcpy(d_B, h_B, sizeB).wait();
+\end{minted}
+
+    \item Launching the kernel on the device. There exists different ways to launch a kernel in \acrshort{sycl}.
+    \begin{enumerate}
+        \item With a lambda function. This must be used with \mintinline{cpp}{[=]} to capture the variables by value and make them accessible inside the kernel as the pointers cannot be transferred to the device otherwise.
+\begin{minted}{cpp}
+q.parallel_for(sycl::range<2>(M, N), [=](sycl::id<2> index) {
+    int row = index[0];
+    int col = index[1];
+    float sum = 0.0f;
+    for (int i = 0; i < K; ++i) {
+        sum += d_A[row * K + i] * d_B[i * N + col];
+    }
+    d_C[row * N + col] = sum;
+}).wait();
+\end{minted}
+
+        \item Another option is a named lambda function. Useful for tracing.
+\begin{minted}{cpp}
+q.submit([&](sycl::handler& h) {
+    h.parallel_for<class MatMul>(sycl::range<2>(M, N),
+                                 [=](sycl::id<2> index) {
+        int row = index[0];
+        int col = index[1];
+        float sum = 0.0f;
+        for (int i = 0; i < K; ++i) {
+            sum += d_A[row * K + i] * d_B[i * N + col];
+        }
+        d_C[row * N + col] = sum;
+    });
+}).wait();
+\end{minted}
+
+        \item The last option is create a functor class and use it to launch the kernel. This is useful for tracing and for more complex kernels.
+\begin{minted}{cpp}
+struct MatrixMulFunctor {
+    float *A, *B, *C;
+    int M, K, N;
+    // Constructor to "capture" the data
+    MatrixMulFunctor(float* a, float* b, float* c,
+                     int m, int k, int n)
+        : A(a), B(b), C(c), M(m), K(k), N(n) {}
+    // The operator() is the actual kernel code
+    void operator()(sycl::id<2> index) const {
+        int row = index[0];
+        int col = index[1];
+        if (row < M && col < N) {
+            float sum = 0.0f;
+            for (int i = 0; i < K; ++i) {
+                sum += A[row * K + i] * B[i * N + col];
+            }
+            C[row * N + col] = sum;
+        }
+    }
+};
+// Launch the kernel using the functor
+q.submit([&](sycl::handler& h) {
+    MatrixMulFunctor functor(d_A, d_B, d_C_2, M, K, N);
+    h.parallel_for(sycl::range<2>(M, N), functor);
+}).wait();
+\end{minted}
+    \end{enumerate}
+
+    \item Copying the data from the device to the host after computation
+\begin{minted}{cpp}
+q.memcpy(h_C, d_C, sizeC).wait();
+std::cout << "Done! Element [0,0] is: " << h_C[0]
+            << " (Expected: " << K * 2.0f << ")"
+            << std::endl;
+\end{minted}
+
+    \item Freeing the device memory
+\begin{minted}{cpp}
+free(d_A, q);
+free(d_B, q);
+free(d_C, q);
+free(h_A);
+free(h_B);
+free(h_C);
+\end{minted}
     
-    \begin{substeps}
-        \item ...
-
-        \item ...
-
-    \end{substeps}
-
-    \item ... 
-    
-\end{steps}
-
-\end{document}
+\end{enumerate}

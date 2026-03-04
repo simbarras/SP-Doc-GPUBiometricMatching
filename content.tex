@@ -86,6 +86,7 @@ Which is great as the architecture of the end device is not know yet and it faci
 Also, the portability of the code don't affect the performance according to the study "Comparing Performance and Portability Between CUDA and SYCL for Protein Database Search on NVIDIA, AMD, and Intel GPUs" (reference~\cite{syclVsCuda2023}).
 
 \subsubsection{GPU Programmation}
+\label{subsubsec:gpu-programmation}
 Now, as the \acrshort{gpu} is a co-processor, it is used to accelerate the performance of certain tasks.
 The code executed on a computer is by default executed on the \acrshort{cpu} and when we want to use the \acrshort{gpu}, we need to explicitly offload the computations and the data to the \acrshort{gpu} using a programming model.
 The figure~\ref{fig:gpu-memory} shows the memory organization of a \acrshort{gpu}.
@@ -98,14 +99,15 @@ The figure~\ref{fig:gpu-memory} shows the memory organization of a \acrshort{gpu
 \end{figure}
 \mypar
 The general steps to use a \acrshort{gpu}, regardless of the programming model, are the following:
-\begin{steps}
-    \item Allocate the parameters and the return values on the host memory.
-    \item Allocate the parameters and the return values on the device memory.
-    \item Copy the parameters from the host memory to the device memory.
+\begin{enumerate}
+    \item Allocate variable on the host memory.
+    \item Allocate variable on the device memory.
+    \item Copy the variable from the host memory to the device memory.
     \item Launch the kernel on the device.
-    \item Copy the return values from the device memory to the host memory.
+    \item Copy the variable from the device memory to the host memory.
     \item Free the device memory.
-\end{steps}
+\end{enumerate}
+The appendix~\ref{appendix:sycl-matmul} contains an example of SYCL code for matrix multiplication that follows these steps.
 
 \newpage
 \section{Conception}
