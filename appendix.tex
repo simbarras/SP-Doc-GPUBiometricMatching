@@ -1,12 +1,13 @@
-\newpage
+\clearpage
 \appendix
 \section{SYCL Matrix Multiplication Example}
 \label{appendix:sycl-matmul}
  
-This section contains the \acrshort{sycl} code for the matrix multiplication example to illustrate the procedure explained in section~\ref{subsubsec:gpu-programmation}. The code is structured to demonstrate the use of \acrshort{sycl} for parallel computation on a GPU, and includes comments to explain each step of the process.
+This appendix provides a \acrshort{sycl} implementation of a matrix multiplication kernel to illustrate the GPU programming workflow described in Section~\ref{subsubsec:gpu-programmation}. The code demonstrates how to orchestrate parallel computation on a device and includes annotations for each phase of the execution.
 
 \begin{enumerate}
-    \item Initializing the size of the matrices
+    \item \textbf{Matrix Dimension Initialization}
+    Defining the matrix dimensions and calculating the required memory sizes in bytes.
 \begin{lstlisting}
 int M = 512, K = 512, N = 512;
 size_t sizeA = M * K * sizeof(float);
@@ -14,40 +15,47 @@ size_t sizeB = K * N * sizeof(float);
 size_t sizeC = M * N * sizeof(float);
 \end{lstlisting}
 
-    \item Allocating memory and initializing the matrices on the host
+    \item \textbf{Host Memory Allocation and Initialization}
+    Allocating memory on the CPU (host) and populating the input matrices with initial data.
 \begin{lstlisting}
 // Allocate host memory
 float* h_A = static_cast<float*>(malloc(sizeA));
 float* h_B = static_cast<float*>(malloc(sizeB));
 float* h_C = static_cast<float*>(malloc(sizeC));
+
 // Initialize matrices with dummy data
 for (int i = 0; i < M * K; i++) h_A[i] = 1.0f;
 for (int i = 0; i < K * N; i++) h_B[i] = 2.0f;
 \end{lstlisting}
 
-    \item Creating a \acrshort{sycl} queue, the queue is used to submit work to the device.
+    \item \textbf{SYCL Queue Creation}
+    The queue serves as the primary interface for submitting command groups to the accelerator device.
 \begin{lstlisting}
 sycl::queue q;
-// Optional - Print the device name
+
+// Optional - Output the selected device name
 std::cout << "Running on: " 
           << q.get_device().get_info<sycl::info::device::name>() 
           << std::endl;
 \end{lstlisting}
 
-    \item Allocating memory on the device and copying data from the host to the device
+    \item \textbf{Device Allocation and Data Transfer}
+    Allocating memory directly on the GPU (device) and transferring data from the host.
 \begin{lstlisting}
-// Allocate device memory
+// Allocate device memory using Unified Shared Memory (USM) device pointers
 float* d_A = sycl::malloc_device<float>(M * K, q);
 float* d_B = sycl::malloc_device<float>(K * N, q);
 float* d_C = sycl::malloc_device<float>(M * N, q);
-// Copying to device memory
+
+// Explicitly copy data to device memory
 q.memcpy(d_A, h_A, sizeA);
-q.memcpy(d_B, h_B, sizeB).wait();
+q.memcpy(d_B, h_B, sizeB).wait(); // Ensure transfer is complete before proceeding
 \end{lstlisting}
 
-    \item Launching the kernel on the device. There exists different ways to launch a kernel in \acrshort{sycl}.
+    \item \textbf{Kernel Dispatch}
+    SYCL offers several methods for launching kernels on the device:
     \begin{enumerate}
-        \item With a lambda function. This must be used with \lstinline{[=]} to capture the variables by value.
+        \item \textbf{Anonymous Lambda Function:} A concise method capturing variables by value using \lstinline{[=]}.
 \begin{lstlisting}
 q.parallel_for(sycl::range<2>(M, N), [=](sycl::id<2> index) {
     int row = index[0];
@@ -60,7 +68,7 @@ q.parallel_for(sycl::range<2>(M, N), [=](sycl::id<2> index) {
 }).wait();
 \end{lstlisting}
 
-        \item Another option is a named lambda function. Useful for tracing.
+        \item \textbf{Named Lambda:} Wrapping the kernel in a command group handler (\lstinline{submit}). This is particularly useful for debugging and profiling tools.
 \begin{lstlisting}
 q.submit([&](sycl::handler& h) {
     h.parallel_for<class MatMul>(sycl::range<2>(M, N),
@@ -76,16 +84,18 @@ q.submit([&](sycl::handler& h) {
 }).wait();
 \end{lstlisting}
 
-        \item The last option is create a functor class.
+        \item \textbf{Functor Class:} Defining a function object to encapsulate the kernel logic, providing a clean separation between host and device code.
 \begin{lstlisting}
 struct MatrixMulFunctor {
     float *A, *B, *C;
     int M, K, N;
-    // Constructor to "capture" the data
+
+    // Constructor to capture host-side parameters
     MatrixMulFunctor(float* a, float* b, float* c,
                      int m, int k, int n)
         : A(a), B(b), C(c), M(m), K(k), N(n) {}
-    // The operator() is the actual kernel code
+
+    // The call operator defines the kernel entry point
     void operator()(sycl::id<2> index) const {
         int row = index[0];
         int col = index[1];
@@ -98,7 +108,8 @@ struct MatrixMulFunctor {
         }
     }
 };
-// Launch the kernel using the functor
+
+// Dispatching the kernel using the functor instance
 q.submit([&](sycl::handler& h) {
     MatrixMulFunctor functor(d_A, d_B, d_C, M, K, N);
     h.parallel_for(sycl::range<2>(M, N), functor);
@@ -106,15 +117,17 @@ q.submit([&](sycl::handler& h) {
 \end{lstlisting}
     \end{enumerate}
 
-    \item Copying the data from the device to the host
+    \item \textbf{Result Retrieval}
+    Copying the computed results from device memory back to the host for verification.
 \begin{lstlisting}
 q.memcpy(h_C, d_C, sizeC).wait();
-std::cout << "Done! Element [0,0] is: " << h_C[0]
+std::cout << "Success! Element [0,0] is: " << h_C[0]
           << " (Expected: " << K * 2.0f << ")"
           << std::endl;
 \end{lstlisting}
 
-    \item Freeing the device memory
+    \item \textbf{Memory Deallocation}
+    Releasing both device and host memory to prevent leaks.
 \begin{lstlisting}
 sycl::free(d_A, q);
 sycl::free(d_B, q);

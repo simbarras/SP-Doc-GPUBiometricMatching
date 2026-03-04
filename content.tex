@@ -1,126 +1,101 @@
 \newpage
 \section{Introduction}
 
-
 \newpage
 \section{Analysis}
-This project is about optimizing the matching part fo the Miura's pipepline~\cite{MiuraLineTracking2004} to be able to perform a \textbf{1 to N} matching.
-The goal is to use a \acrshort{gpu} to perform in a reasonable time for a large database of users.
+This project focuses on optimizing the matching component of Miura's pipeline~\cite{MiuraLineTracking2004} to support \textbf{1-to-N} matching. The primary objective is to leverage a \acrshort{gpu} to ensure efficient processing times even when searching against a large database of users.
 
-\subsection{The Miura's Pipeline}
-The Miura's pipeline from the publication\cite{MiuraLineTracking2004} is a method that takes as input a single image of a finger, extracts the veins and then computes the distance between the extracted veins and a reference vein pattern.
-It shows good performance and accuracy and show a possibility of using this biometric attribute for authentication purposes.
+\subsection{The Miura Pipeline}
+The Miura pipeline, introduced in \cite{MiuraLineTracking2004}, is a method that processes a single image of a finger to extract vein patterns. It then computes the distance between these extracted veins and a reference pattern. The method is recognized for its high performance and accuracy, demonstrating the viability of using finger vein patterns as a biometric attribute for authentication.
 
 \subsubsection{Previous Work}
 \label{subsubsec:previous-work}
-The Miura's pipeline is a method that was proposed in 2004 and since then, several works have been done inside the EPFL lab's Lasec to use it as auhtentication for patient identification in hospitals.
+Since its publication in 2004 \cite{MiuraLineTracking2004}, several research projects at the EPFL LASEC lab have built upon the Miura pipeline, specifically exploring its use for patient identification and authentication in hospital environments.
 
 \paragraph*{Optimized Pipeline}
-In 2024, Lara Sofie Lenz, created an optimized implementation of Miura's pipeline~\cite{OptimizedPipelineLaraSofieLenz24}.
-This C++ optimized implementation runs arround 10 times faster than the original implementation in Python for a \textbf{1 to 1} matching.
-The figure~\ref{fig:optimized-pipeline} shows the flow of the optimized pipeline.
+In 2024, Lara Sofie Lenz developed an optimized implementation of the Miura pipeline~\cite{OptimizedPipelineLaraSofieLenz24}. This C++ implementation is approximately 10 times faster than the original Python version for \textbf{1-to-1} matching. The flow of this optimized pipeline is illustrated in Figure~\ref{fig:optimized-pipeline}.
+
 \begin{figure}[ht]
     \mypar
     \centering
     \includegraphics[width=\textwidth]{figures/pipeline/third-pipeline.pdf}
-    \caption{The flow of the optimized pipeline from Lara Sofie Lenz' report~\cite{OptimizedPipelineLaraSofieLenz24}}
+    \caption{The flow of the optimized pipeline, adapted from Lara Sofie Lenz's report~\cite{OptimizedPipelineLaraSofieLenz24}}
     \label{fig:optimized-pipeline}
 \end{figure}
 
-This optimized pipeline will be used as a base for this project.
-The extraction part of the pipeline will not be changed and the matching part, now for a 1:1 matching, will be modified to perform a 1:N matching using a \acrshort{gpu}.
+This optimized implementation serves as the foundation for this project. While the extraction stage of the pipeline remains unchanged, the matching stage—currently designed for 1-to-1 matching—will be modified to perform 1-to-N matching using a \acrshort{gpu}.
 
 \paragraph*{Mathematical Background}
-We see that the Optimized pipeline (figure~\ref{fig:optimized-pipeline}) uses a \acrfull{fft} to compute the cross-correlation between the extracted veins and the reference vein pattern.
-The mathematical explanation of using a \acrshort{fft} to compute the cross-correlation between two signals is explained in detail in the semester project of Vincent Luke Ventura about Biometric Homomorphic Matching~\cite{VincentLukeVentura26}.
+As shown in Figure~\ref{fig:optimized-pipeline}, the optimized pipeline utilizes a \acrfull{fft} to compute the cross-correlation between extracted veins and the reference pattern. A detailed mathematical explanation of using \acrshort{fft} for signal cross-correlation can be found in Vincent Luke Ventura's project on Biometric Homomorphic Matching~\cite{VincentLukeVentura26}.
 
-\subsubsection{1 to N Matching}
-All the previous works in the Lasec lab about Biometric identification explained in the previous section~\ref{subsubsec:previous-work} show good performance (less than 1 second) for a \textbf{1 to 1} matching.
-The 1:1 is obviously quicker than a 1:N matching, but it requires the user to select his id before the authentication.
-The 1:N matching will be used at sign up phase, to ensure that the user is not already in the database.
+\subsubsection{1-to-N Matching}
+Previous research at LASEC regarding the biometric identification methods mentioned in Section~\ref{subsubsec:previous-work} has demonstrated strong performance (under 1 second) for \textbf{1-to-1} matching. While 1-to-1 matching is inherently faster, it requires users to provide an ID before authentication. In contrast, 1-to-N matching is essential during the registration phase to ensure a user is not already present in the database.
 \mypar
-The idea is to compute the cross-correlation between the extracted veins and all the reference vein patterns in the database at the same time.
-The strategy is a shifting of architectural design from a \acrshort{cpu} which is the classical processor unit to a \acrshort{gpu} which is a specialized hardware that is designed to perform parallel computations efficiently.
+The objective is to compute the cross-correlation between the extracted veins and all reference patterns in the database simultaneously. This requires a shift in architectural design from the \acrshort{cpu}, a general-purpose processor, to the \acrshort{gpu}, which is specialized hardware designed for massive parallel computation.
 \mypar
-The scope of this project is to uses the optimized pipeline from Lara Sofie Lenz~\cite{OptimizedPipelineLaraSofieLenz24} and don't change the part of the pipeline related to the veins extraction.
-The matching part of the pipeline is modified to compute the cross-correlation between the extracted veins and all the reference vein patterns in the database at the same time using a \acrshort{gpu}.
+The scope of this project is limited to modifying the matching stage of Lenz's optimized pipeline~\cite{OptimizedPipelineLaraSofieLenz24}. The extraction logic will remain intact, while the matching component will be redesigned to leverage the \acrshort{gpu} for simultaneous cross-correlation across the entire database.
 
 \subsection{Graphics Processing Units}
-\acrfull{gpu} are specialized hardware that are designed to perform parallel computations efficiently.
-Most of the time, they are used as a co-processor to a \acrshort{cpu} to accelerate the performance of certain applications.
+\acrfull{gpu}s are specialized hardware components designed for efficient parallel computation. They typically function as co-processors to a \acrshort{cpu}, accelerating specific data-parallel applications.
 
 \subsubsection{Architecture}
-The classical architecture and the one of the main processor in a computer is the \acrfull{cpu}.
-This processor is designed to perform a wide range of tasks and is optimized for single, or a few, threaded performance.
-We generally says that it is a \acrfull{sisd} even if now  some \acrshort{cpu} have multiple cores and can perform some parallel computations.
+The standard architecture for a computer's main processor is the \acrshort{cpu}. It is designed for a broad range of tasks and is optimized for low-latency, single-threaded (or few-threaded) performance. It is generally categorized as \acrlong{sisd}, although modern multi-core \acrshort{cpu}s do support levels of parallelism.
 \mypar
-The \acrshort{gpu} is a specialized hardware that is designed to perform parallel computations efficiently.
-We generally says that it is a \acrfull{simd} because it can perform, physically, the same instruction on multiple data at the same time.
+Conversely, the \acrshort{gpu} is built for high-throughput parallel tasks and is classified as \acrlong{simd} because it can physically execute the same instruction across multiple data points simultaneously.
+Note that Nvidia refers to their architecture as \acrlong{simt} to emphasize that while threads execute the same instruction.
 \mypar
-In general, a \acrshort{gpu} is composed of several streaming multiprocessors (SM) that are composed of several cores. Each core can execute a thread and the threads are grouped in blocks that are executed on the SMs.
-The particularity between the core of a \acrshort{cpu} and the core of a \acrshort{gpu} (SM) is that all the threads of a block execute \textbf{the same instruction} at the same time.
-Multiple SMs together form a Graphics Processor Cluster (GPC) and multiple GPCs together form a \acrshort{gpu}.
-As shown in the figure~\ref{fig:gpu-architecture}, the \acrshort{gpu} has a different memory hierarchy than the \acrshort{cpu} and it is optimized for high throughput rather than low latency.
-The L2 cache is shared between all the SMs and the global memory is accessible by all the threads but has a high latency compared to the shared memory that is only accessible by the threads of a block and has a low latency.
+A \acrshort{gpu} typically consists of several Graphics Processor Cluster (GPC), each containing multiple \acrfull{sm}.
+These \acrshort{sm}s contain multiple cores, and each core executes a thread. Threads are logically organized into blocks.
+A key distinction of the \acrshort{gpu} is that all threads within a block execute \textbf{the same instruction} at the same time.
+\mypar
+As illustrated in Figure~\ref{fig:gpu-architecture}, \acrshort{gpu}s utilize a different memory hierarchy than \acrshort{cpu}s, prioritizing high throughput over low latency. The L2 cache is shared across all \acrshort{sm}s, and while global memory is accessible by all threads, it has higher latency compared to the shared memory available to threads within a specific block.
+
 \begin{figure}[ht]
     \mypar
     \centering
     \includegraphics[width=0.85\textwidth]{figures/gpu/GPU-architecture.png}
-    \caption{A GPU architecture schema from the PDF document~\cite{vmwareGpuArch}}
+    \caption{A GPU architecture schema~\cite{vmwareGpuArch}}
     \label{fig:gpu-architecture}
 \end{figure}
 
-Every constructors of \acrshort{gpu} have their own architecture and their own way to organize the threads and the memory hierarchy but the general idea is the same and the main difference is the number of cores and the memory bandwidth.
-\mypar
-Other architecture, like Apple Silicon, have a unified memory architecture where the \acrshort{cpu} and the \acrshort{gpu} share the same memory and can access it with the same latency.
+While different manufacturers have unique thread organizations and memory hierarchies, the underlying principle remains the same. The primary differences usually lie in core counts and memory bandwidth.
+Alternative architectures, such as Apple Silicon, employ a unified memory architecture where the \acrshort{cpu} and \acrshort{gpu} share a single memory pool, allowing both to access data without copying it.
 
-\subsubsection{Constructors And Programming Models}
-In 2026, the two main architectures designers of \acrshort{gpu} are Nvidia and AMD.
-There are also emerging architectures like Intel with their Intel Arc series and Apple which include a \acrshort{gpu} in their Apple Silicon chips.
-We can also mention Google with their Tensor Processing Units (TPU) that are specialized hardware for machine learning tasks.
+\subsubsection{Manufacturers and Programming Models}
+In 2026, the two dominant \acrshort{gpu} architecture designers are Nvidia and AMD. Emerging competitors include Intel, with their Intel Arc series, and Apple, which integrates \acrshort{gpu}s into their Silicon chips.
+Additionally, Google's \acrfull{tpu} isn't a \acrshort{gpu} but it is a specialized hardware for machine learning.
 \mypar
-To use a device like this, we need to use a programming model that allows us to offload the computations and the data.
-There is \acrshort{cuda} which is a proprietary programming model developed by Nvidia and that only works on Nvidia \acrshort{gpu}.
-AMD has developed \acrshort{hip} which is a programming model that allows to write code that can be executed on both Nvidia and AMD.
-There is also \acrshort{opencl} which is an open standard that allows to write code that can be executed on a wide range of devices, including \acrshort{gpu} from different manufacturers.
+Utilizing these devices requires a programming model to offload data and computations. \acrshort{cuda} is a proprietary model developed by Nvidia and is exclusive to their hardware. AMD's \acrshort{hip} is another programming model designed to allow code to run on both Nvidia and AMD hardware. \acrshort{opencl} is an open standard supporting a wide range of devices from various manufacturers.
 \mypar
-The choice of the programming model is important because it will determine the performance and the portability of the code.
-\acrshort{opencl} seems to be a good choice because it allows to write code on a wide range of devices.
-However, the performance aren't always optimal, the coding style is old and some of the constructors stop supporting it.
+The choice of programming model is critical for performance and portability. While \acrshort{opencl} offers broad compatibility, its performance is not always optimal, the coding style is dated, and some manufacturers have reduced their support for it.
 \mypar
-\acrshort{sycl}~\cite{sycl2020} is an abastraction layer that allows to write code that can be executed with different \acrshort{gpu} constructors.
-The difference between \acrshort{sycl} and \acrshort{opencl} is that \acrshort{sycl} is a higher level of abstraction that allows to write code in a more modern C++ style which will be compiled to the target architecture using the appropriate programming model (like \acrshort{cuda} or \acrshort{hip}).
-This is very useful because the architecture of the end device is not know yet and it facilitates the development phases for computer wihtout a specific \acrshort{gpu} constructor.
-The performance is a revelenat point to consider.
-According to the study "Comparing Performance and Portability Between CUDA and SYCL for Protein Database Search on NVIDIA, AMD, and Intel GPUs" (reference~\cite{syclVsCuda2023}), the performance of \acrshort{sycl} is comparable to \acrshort{cuda} and \acrshort{hip} on Nvidia and AMD \acrshort{gpu} respectively.
+\acrshort{sycl}~\cite{sycl2020} is an abstraction layer that enables code execution across different hardware manufacturers. Unlike \acrshort{opencl}, \acrshort{sycl} provides a high-level, modern C++ style that compiles to the target architecture's native model (such as \acrshort{cuda} or \acrshort{hip}). This is highly beneficial during development, as the specific end-device may not yet be known.
 \mypar
-For this project, we will use \acrshort{sycl} as the programming model to implement the 1:N matching on the \acrshort{gpu}.
-It allows a wide range of compatibility for the end product and it's easier to develop with a PC without a specific \acrshort{gpu} constructor.
+Performance remains a key consideration. According to "Comparing Performance and Portability Between CUDA and SYCL for Protein Database Search on NVIDIA, AMD, and Intel GPUs"~\cite{syclVsCuda2023}, \acrshort{sycl} achieves minimal overhead performance compared naive model like \acrshort{cuda} or \acrshort{hip}. 
+\mypar
+For this project, \acrshort{sycl} will be used to implement the 1-to-N matching. It provides broad compatibility and simplifies development on workstations that may lack a specific \acrshort{gpu} brand.
 
-\subsubsection{GPU Programmation}
+\subsubsection{GPU Programming}
 \label{subsubsec:gpu-programmation}
-As the \acrshort{gpu} is a co-processor used to accelerate the performance of certain tasks, the code executed on a computer is by default executed on the \acrshort{cpu}.
-When we want to use the \acrshort{gpu}, we need to explicitly offload the computations and the data to the device using a programming model.
-The figure~\ref{fig:gpu-memory} shows the memory organization of a \acrshort{gpu}.
-With this schema, we see that the data stored in the host memory (RAM) is not directly accessible by the \acrshort{gpu} and we need to copy it to the device memory (VRAM) before being able to use it.
+Since the \acrshort{gpu} acts as a co-processor, code is executed on the \acrshort{cpu} by default. To utilize the \acrshort{gpu}, developers must explicitly offload computations and data. Figure~\ref{fig:gpu-memory} illustrates the memory organization of a system with a \acrshort{gpu}. Data in the host memory (\acrshort{ram}) is not directly accessible by the \acrshort{gpu}; it must be copied to the device memory (\acrshort{vram}) before processing.
 \begin{figure}[ht]
     \mypar
     \centering
     \includegraphics[width=\textwidth]{figures/gpu/gpu-memory.png}
-    \caption{Memory hierarchy in a PC with a GPU}
+    \caption{Memory hierarchy in a PC with a discrete GPU}
     \label{fig:gpu-memory}
 \end{figure}
 \mypar
-The general steps to use a \acrshort{gpu}, regardless of the programming model, are the following:
+The standard workflow for \acrshort{gpu} acceleration, regardless of the programming model, is as follows:
 \begin{enumerate}
-    \item Allocate variable on the host memory.
-    \item Allocate variable on the device memory.
-    \item Copy the variable from the host memory to the device memory.
+    \item Allocate variables in the host memory.
+    \item Allocate corresponding variables in the device memory.
+    \item Copy data from the host memory to the device memory.
     \item Launch the kernel on the device.
-    \item Copy the variable from the device memory to the host memory.
+    \item Copy the results from the device memory back to the host memory.
     \item Free the device memory.
 \end{enumerate}
-The appendix~\ref{appendix:sycl-matmul} contains an example of SYCL code for matrix multiplication that follows these steps.
+Appendix~\ref{appendix:sycl-matmul} provides an example of SYCL code for matrix multiplication following these steps.
 
 \newpage
 \section{Conception}
