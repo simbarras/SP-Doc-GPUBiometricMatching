@@ -5,18 +5,17 @@
  
 This section contains the \acrshort{sycl} code for the matrix multiplication example to illustrate the procedure explained in section~\ref{subsubsec:gpu-programmation}. The code is structured to demonstrate the use of \acrshort{sycl} for parallel computation on a GPU, and includes comments to explain each step of the process.
 
-
 \begin{enumerate}
     \item Initializing the size of the matrices
-\begin{minted}{cpp}
+\begin{lstlisting}
 int M = 512, K = 512, N = 512;
 size_t sizeA = M * K * sizeof(float);
 size_t sizeB = K * N * sizeof(float);
 size_t sizeC = M * N * sizeof(float);
-\end{minted}
+\end{lstlisting}
 
     \item Allocating memory and initializing the matrices on the host
-\begin{minted}{cpp}
+\begin{lstlisting}
 // Allocate host memory
 float* h_A = static_cast<float*>(malloc(sizeA));
 float* h_B = static_cast<float*>(malloc(sizeB));
@@ -24,19 +23,19 @@ float* h_C = static_cast<float*>(malloc(sizeC));
 // Initialize matrices with dummy data
 for (int i = 0; i < M * K; i++) h_A[i] = 1.0f;
 for (int i = 0; i < K * N; i++) h_B[i] = 2.0f;
-\end{minted}
+\end{lstlisting}
 
     \item Creating a \acrshort{sycl} queue, the queue is used to submit work to the device.
-\begin{minted}{cpp}
+\begin{lstlisting}
 sycl::queue q;
 // Optional - Print the device name
 std::cout << "Running on: " 
-            << q.get_device().get_info<sycl::info::device::name>() 
-            << std::endl;
-\end{minted}
+          << q.get_device().get_info<sycl::info::device::name>() 
+          << std::endl;
+\end{lstlisting}
 
     \item Allocating memory on the device and copying data from the host to the device
-\begin{minted}{cpp}
+\begin{lstlisting}
 // Allocate device memory
 float* d_A = sycl::malloc_device<float>(M * K, q);
 float* d_B = sycl::malloc_device<float>(K * N, q);
@@ -44,12 +43,12 @@ float* d_C = sycl::malloc_device<float>(M * N, q);
 // Copying to device memory
 q.memcpy(d_A, h_A, sizeA);
 q.memcpy(d_B, h_B, sizeB).wait();
-\end{minted}
+\end{lstlisting}
 
     \item Launching the kernel on the device. There exists different ways to launch a kernel in \acrshort{sycl}.
     \begin{enumerate}
-        \item With a lambda function. This must be used with \mintinline{cpp}{[=]} to capture the variables by value and make them accessible inside the kernel as the pointers cannot be transferred to the device otherwise.
-\begin{minted}{cpp}
+        \item With a lambda function. This must be used with \lstinline{[=]} to capture the variables by value.
+\begin{lstlisting}
 q.parallel_for(sycl::range<2>(M, N), [=](sycl::id<2> index) {
     int row = index[0];
     int col = index[1];
@@ -59,10 +58,10 @@ q.parallel_for(sycl::range<2>(M, N), [=](sycl::id<2> index) {
     }
     d_C[row * N + col] = sum;
 }).wait();
-\end{minted}
+\end{lstlisting}
 
         \item Another option is a named lambda function. Useful for tracing.
-\begin{minted}{cpp}
+\begin{lstlisting}
 q.submit([&](sycl::handler& h) {
     h.parallel_for<class MatMul>(sycl::range<2>(M, N),
                                  [=](sycl::id<2> index) {
@@ -75,10 +74,10 @@ q.submit([&](sycl::handler& h) {
         d_C[row * N + col] = sum;
     });
 }).wait();
-\end{minted}
+\end{lstlisting}
 
-        \item The last option is create a functor class and use it to launch the kernel. This is useful for tracing and for more complex kernels.
-\begin{minted}{cpp}
+        \item The last option is create a functor class.
+\begin{lstlisting}
 struct MatrixMulFunctor {
     float *A, *B, *C;
     int M, K, N;
@@ -101,28 +100,28 @@ struct MatrixMulFunctor {
 };
 // Launch the kernel using the functor
 q.submit([&](sycl::handler& h) {
-    MatrixMulFunctor functor(d_A, d_B, d_C_2, M, K, N);
+    MatrixMulFunctor functor(d_A, d_B, d_C, M, K, N);
     h.parallel_for(sycl::range<2>(M, N), functor);
 }).wait();
-\end{minted}
+\end{lstlisting}
     \end{enumerate}
 
-    \item Copying the data from the device to the host after computation
-\begin{minted}{cpp}
+    \item Copying the data from the device to the host
+\begin{lstlisting}
 q.memcpy(h_C, d_C, sizeC).wait();
 std::cout << "Done! Element [0,0] is: " << h_C[0]
-            << " (Expected: " << K * 2.0f << ")"
-            << std::endl;
-\end{minted}
+          << " (Expected: " << K * 2.0f << ")"
+          << std::endl;
+\end{lstlisting}
 
     \item Freeing the device memory
-\begin{minted}{cpp}
-free(d_A, q);
-free(d_B, q);
-free(d_C, q);
+\begin{lstlisting}
+sycl::free(d_A, q);
+sycl::free(d_B, q);
+sycl::free(d_C, q);
 free(h_A);
 free(h_B);
 free(h_C);
-\end{minted}
+\end{lstlisting}
     
 \end{enumerate}

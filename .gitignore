@@ -15,7 +15,10 @@
 **.out
 **.synctex.gz
 **.toc
+**.lof
+**.lot
 _minted/
+*.minted
 
 .DS_Store
 
